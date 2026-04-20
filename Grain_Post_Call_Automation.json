@@ -1,0 +1,453 @@
+{
+  "name": "Grain Post Call Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "72b995ef-c5a9-4fea-ba7c-38ae6e0d5032",
+              "name": "recording_id",
+              "value": "={{ $json.body.data.id }}",
+              "type": "string"
+            },
+            {
+              "id": "780de3f8-4d2b-4477-b6a3-0989849397af",
+              "name": "meeting_title",
+              "value": "={{ $json.body.data.title }}",
+              "type": "string"
+            },
+            {
+              "id": "ef7bd1f9-4f1a-4a41-ad5c-4f536eb76bb8",
+              "name": "meeting_end_date_time",
+              "value": "={{ $json.body.data.end_datetime }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "2a02df40-399d-41fa-b04b-1884b643d45d",
+      "name": "Extract Recording and Meeting Details"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.grain.com/_/public-api/recordings/{{ $json.recording_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "specifyQuery": "json",
+        "jsonQuery": "{\n  \"include_highlights\": true,\n  \"include_participants\": true,\n  \"include_owners\": true,\n  \"include_calendar_id\": true,\n  \"transcript_format\": \"json\",\n  \"intelligence_notes_format\": \"text\",\n  \"allowed_intelligence_notes\": []\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        0
+      ],
+      "id": "a7d1eaa3-4841-4af8-905a-78c9f09f17b1",
+      "name": "Get Recording"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c794fc60-6778-4cd1-a8e6-210d47527e2b",
+              "leftValue": "={{ $json.participants.scope }}",
+              "rightValue": "external",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        976,
+        0
+      ],
+      "id": "b74c516b-c2db-4268-a59c-c41c0473783f",
+      "name": "Remove Internal Participants"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "participants",
+        "include": "selectedOtherFields",
+        "fieldsToInclude": "id, title, end_datetime",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        784,
+        0
+      ],
+      "id": "27388c46-ad40-4bb0-b547-492c87b3e5f2",
+      "name": "Split Out Participants"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        0
+      ],
+      "id": "4a680e8d-8eae-494e-ac7d-dc14396e1f04",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.grain.com/_/public-api/recordings/{{ $json.id }}/transcript.txt",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1360,
+        0
+      ],
+      "id": "06c21307-8821-4676-b5be-71fa99ce4ce5",
+      "name": "Get Transcript"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bf9c35d9-7dad-48a9-8739-922aec22f7bd",
+              "name": "recording_id",
+              "value": "={{ $('Remove Internal Participants').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "330d655b-47d3-48ea-8d36-846b6bd6eb2f",
+              "name": "meeting_title",
+              "value": "={{ $('Remove Internal Participants').item.json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "09304c27-5eaf-47ca-a7a3-e4d815950d4d",
+              "name": "meeting_end_date_time",
+              "value": "={{ $('Limit').item.json.end_datetime }}",
+              "type": "string"
+            },
+            {
+              "id": "ede4392a-61ab-46b4-811e-d47d646a66a9",
+              "name": "participants",
+              "value": "={{ $('Limit').item.json.participants }}",
+              "type": "object"
+            },
+            {
+              "id": "7440a810-c2d0-40c4-9659-0edaf8edfd99",
+              "name": "transcript",
+              "value": "={{ $json.data }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1552,
+        0
+      ],
+      "id": "f2584fd0-13ed-4845-ad8a-136781ee94e6",
+      "name": "Set Participants and Transcript Details"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "grain-webhook",
+        "options": {}
+      },
+      "id": "3021e3d7-ab06-4ecf-86f9-6a483d4051ed",
+      "name": "Grain Webhook Receiver",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "grain-call-webhook"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1728,
+        208
+      ],
+      "id": "b98aaf05-e3e4-4eca-9489-5a12b92be372",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"call_overview\": \"Summary of company, attendees, date, and call type.\",\n  \"objective_and_outcome\": \"Briefly state the goal and the result of the call.\",\n  \"prospect_context\": \"A short summary of who the prospect is and why they are important.\",\n  \"discovery_highlights\": \"Key pain points, needs, and important information uncovered.\",\n  \"objections_and_reactions\": \"Main objections or concerns raised and how they were addressed.\",\n  \"next_steps_and_ownership\": \"List of agreed-upon actions, who owns them, and deadlines.\",\n  \"call_performance\": \"Overall score and brief notes on the sales rep's performance.\",\n  \"coach_summary\": \"High-level coaching takeaways and suggestions for improvement.\",\n  \"training_moment\": \"A specific moment or pattern from the call to be used for team training.\",\n  \"follow_up_email_points\": \"Bullet points summarizing the key information for the follow-up email.\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1904,
+        208
+      ],
+      "id": "897dc9a6-5f6c-4861-af0c-6090bd38af8a",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "1KVC0QX6iKMnbHBSJbf_9HuWgNR0x-80aCNuEhQ3XJNM",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=-------------------------------------------------------------------------------------------------------------------------------\n\nCall Overview : \n{{ $json.output.call_overview }}\n\n\nObjectives and Outcome :\n{{ $json.output.objective_and_outcome }}\n\n\nProspect Context : \n{{ $json.output.prospect_context }}\n\n\nDiscovery Highlights : \n{{ $json.output.discovery_highlights }}\n\n\nObjections and Reactions : \n{{ $json.output.objections_and_reactions }}\n\n\nNext Steps and Ownerships : \n{{ $json.output.next_steps_and_ownership }}\n\n\nCall Performance : \n{{ $json.output.call_performance }}\n\n\nCoach Summary : \n{{ $json.output.coach_summary }}\n\n\nTraining Moment : \n{{ $json.output.training_moment }}\n\n\nFollow Up Email Points : \n{{ $json.output.follow_up_email_points }}\n\n\n\n\n\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2112,
+        0
+      ],
+      "id": "43f31aef-ecb7-405c-bc50-327684a66bd3",
+      "name": "Update a document"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Please analyze the following meeting transcript and extract the key information into the specified JSON format.\n\nTranscript:\n{{ $json.transcript }}\n\nMeeting Details : \nMeeting Title : {{ $json.meeting_title }}\nMeeting End Date and Time : {{ $json.meeting_end_date_time }}\n\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are an expert Sales Call Analyst and Coach AI. Your purpose is to meticulously analyze a sales call transcript and extract key information into a structured JSON object that matches a detailed sales analysis template.\n\nInstructions:\n\nRead the entire transcript provided by the user carefully.\n\nAnalyze the content to identify the following key pieces of information, based on the sales analysis format:\n\nCall Overview: Basic facts like company, attendees, and call date.\n\nObjective & Outcome: The goal of the call and its actual result.\n\nProspect Context: A brief summary of the prospect's situation.\n\nDiscovery Highlights: Key details like pain points, current tools, and decision process.\n\nObjections & Reactions: Any concerns raised by the prospect and how they were handled.\n\nNext Steps & Ownership: Agreed-upon actions, owners, and due dates.\n\nCall Performance: A breakdown and scoring (1-5) of the sales rep's performance in key areas.\n\nCoach’s Summary: High-level coaching takeaways.\n\nYou are an expert Sales Call Analyst and Coach AI. Your purpose is to meticulously analyze a sales call transcript and extract key information into a structured JSON object that matches a detailed sales analysis template.\n\nInstructions:\n\nRead the entire transcript provided by the user carefully.\n\nAnalyze the content to identify the following key pieces of information, based on the sales analysis format:\n\nCall Overview: Basic facts like company, attendees, and call date.\n\nObjective & Outcome: The goal of the call and its actual result.\n\nProspect Context: A brief summary of the prospect's situation.\n\nDiscovery Highlights: Key details like pain points, current tools, and decision process.\n\nObjections & Reactions: Any concerns raised by the prospect and how they were handled.\n\nNext Steps & Ownership: Agreed-upon actions, owners, and due dates.\n\nCall Performance: A breakdown and scoring (1-5) of the sales rep's performance in key areas.\n\nCoach’s Summary: High-level coaching takeaways.\n\nTraining Moments: Anything worth sharing with the broader team.\n\nFollow-Up Email Points: Key information needed to draft a follow-up email.\n\nPopulate every field in the required JSON structure. If information for a specific field cannot be found in the transcript, use an empty string \"\".\n\nYour analysis must be objective and based only on the information present in the transcript.\n\nOutput Format : \n\n{\n\t\"call_overview\": \"_\",\n    \"objective_and_outcome\": \"_\",\n    \"prospect_context:\": \"_\",\n    \"discovery_highlights\": \"_\",\n    \"objections_and_reactions\": \"_\",\n    \"next_steps_and_ownership\": \"_\",\n    \"call_performance\": \"_\",\n    \"coach_summary\": \"_\",\n    \"training_moment\": \"_\",\n    \"follow_up_email_points\": \"_\"\n}\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1760,
+        0
+      ],
+      "id": "ff7e209f-3b60-4547-a0a0-218a9b7f0e8d",
+      "name": "Post Call Doc Agent"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b4c19dfb-8c68-4a95-8042-578ff596dbaf",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "5a4d32b5-9ea8-418f-932a-26b9685ebbf0",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "cd0cf61e-47f4-409f-b906-dd7348eef788",
+              "name": "end_datetime",
+              "value": "={{ $json.end_datetime }}",
+              "type": "string"
+            },
+            {
+              "id": "ed6957e6-541a-466f-9c30-f9117144efe1",
+              "name": "participants",
+              "value": "={{ $json.participants }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        592,
+        0
+      ],
+      "id": "d103e893-44d8-41c3-bd84-e95551104a83",
+      "name": "Update Recording and Meeting Details"
+    }
+  ],
+  "connections": {
+    "Extract Recording and Meeting Details": {
+      "main": [
+        [
+          {
+            "node": "Get Recording",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Recording": {
+      "main": [
+        [
+          {
+            "node": "Update Recording and Meeting Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Internal Participants": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out Participants": {
+      "main": [
+        [
+          {
+            "node": "Remove Internal Participants",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "Get Transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Transcript": {
+      "main": [
+        [
+          {
+            "node": "Set Participants and Transcript Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Participants and Transcript Details": {
+      "main": [
+        [
+          {
+            "node": "Post Call Doc Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grain Webhook Receiver": {
+      "main": [
+        [
+          {
+            "node": "Extract Recording and Meeting Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Post Call Doc Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Post Call Doc Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Call Doc Agent": {
+      "main": [
+        [
+          {
+            "node": "Update a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Recording and Meeting Details": {
+      "main": [
+        [
+          {
+            "node": "Split Out Participants",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "pinData": {},
+  "triggerCount": 0,
+  "meta": null
+}
